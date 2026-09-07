@@ -14,8 +14,13 @@ from PIL import Image
 
 import warnings
 warnings.filterwarnings("ignore")
-# Suppress TensorFlow warnings
+# Suppress TensorFlow warnings and disable Metal GPU to prevent XLA/JIT compiler errors on Apple Silicon
 tf.get_logger().setLevel('ERROR')
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+try:
+    tf.config.set_visible_devices([], 'GPU')
+except Exception:
+    pass
 
 def load_and_preprocess_image(image_path, target_size=(224, 224)):
     """
@@ -185,6 +190,9 @@ class FoundationalCVModel:
         numpy.ndarray
             Predictions or features from the model for the given images.
         """
+        with tf.device('/CPU:0'):
+            inputs = tf.convert_to_tensor(images, dtype=tf.float32)
+            predictions = self.model(inputs, training=False).numpy()
         return predictions
 
 
